@@ -1,5 +1,6 @@
 import express from 'express';
 import fs from 'fs';
+import { readFile } from 'fs/promises';
 
 const PORT = process.env.PORT || 3000;
 
@@ -9,15 +10,16 @@ const frasi = ['ciao, come stai?', 'Evviva la vita', 'sei uno sviluppatore anche
 const km_in_miglia = 0.621371;
 const file_path = 'testo.txt';
 
+
 app.get('/', (req, res) => {
     res.json({ message: "server funzionante!" });
-})
+});
 
  //GENERA FRASI RANDOM
 app.get('/frase', (req, res) => {
     const fraseCasuale = frasi[Math.floor(Math.random()*frasi.length)];
     return res.json({ frase: fraseCasuale });
-})
+});
 
 //CONVERTI CHILOMETRI IN MIGLIA
 app.get('/converti', (req, res) => {
@@ -65,7 +67,59 @@ app.delete('/testo', (req, res) => {
         }
         res.json({messaggio: 'testo cancellato con successo'});
     })
-})
+});
+
+app.get('/testo', (req, res) => {
+    fs.readFile(file_path, 'utf-8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ errore: 'problema con la lettura del testo'});
+        };
+
+        const testo = data.trim();
+        //parole e caratteri
+        const parole = testo.match(/\b\w+\b/g) || [];
+        const num_parole = parole.length;
+        const num_caratteri = testo.length;
+
+        //vocali e consonanti
+        const vocali = testo.match(/[aeiouAEIOUàèéìòóù]/g) || [];
+        const consonanti = testo.match(/[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]/g) || [];
+
+        //parola più lunga e parola più corta
+        const parola_piu_lunga = parole.reduce((a,b) => (b.lenght > a.length ? b : a), "");
+        const parola_piu_corta = parole.reduce((a,b) => (b.lenght < a.lenght ? b : a), parole[0] || "");
+
+        //frequenza parole
+        const frequenza = {};
+        let parola_piu_ripetuta = "";
+        let num_parola_piu_ripetuta = 0;
+
+        for (const parola of parole) {
+            frequenza[parola] = (frequenza[parola] || 0) + 1;
+            if(frequenza[parola] > num_parola_piu_ripetuta) {
+                parola_piu_ripetuta = parola;
+                num_parola_piu_ripetuta = frequenza[parola];
+            };
+        };
+
+        return res.json({
+            testo,
+            num_parole,
+            num_caratteri,
+            vocali: vocali.lenght,
+            consonanti: consonanti.lenght,
+            parola_piu_lunga,
+            parola_piu_corta,
+            parola_piu_ripetuta,
+            num_parola_piu_ripetuta
+        });
+            
+    });
+});
+
+/* app.post('/testo', (req, res) => {
+    
+}); */
 
 app.listen(PORT, () => {
     console.log('server in esecuzione sulla porta: ' + PORT);
